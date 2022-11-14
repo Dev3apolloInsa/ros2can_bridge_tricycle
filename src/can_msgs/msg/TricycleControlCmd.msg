@@ -1,6 +1,6 @@
 std_msgs/Header header
 float32 throttle
-uint8 steer
+float32 steer
 string brake
 bool reverse
 

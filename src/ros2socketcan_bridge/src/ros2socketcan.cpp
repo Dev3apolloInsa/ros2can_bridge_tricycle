@@ -63,11 +63,19 @@ double ros2socketcan::GetCommandSteer(double val, double inc)
   return val;
 }
 
-/*******************************************************************************************************************/
-/*                                                                                                                 */
-/* Traitement des données Can à envoyer "ID = 0x10" sur topic :/CAN/can0/receive_tricycle_cmd & /CAN/can0/transmit */
-/*                                                                                                                 */
-/*******************************************************************************************************************/
+/**********************************************************************************************************************/
+/*                                                                                                                    */
+/* Traitement des données Can à envoyer "ID = 0x10" sur topic :/CAN/can0/manuel_tricycle_control & /CAN/can0/transmit */
+/*                                                                                                                    */
+/*  TRAME ID 0x10 :                                                                                                   */
+/* -----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/* |      8 bits/0     |      8 bits/1    |      8 bits/2     |      8 bits/3     |      8 bits/4     |      8 bits/5     |      8 bits/6     |      8 bits/7      |*/
+/* |Bits commande cmd10|      pwm_frein H  |     pwm_frein L   |  force_frein H    |   force_frein L   |  angle direction  |   DAC_accel  H    |  DAC_accel L      |*/
+/* -----------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*                                                                                                                     */
+/* struct of can data : candata[8] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};                                 */
+/*                                                                                                                     */
+/***********************************************************************************************************************/
 void ros2socketcan::JoystickLoopThreadFunc()
 {
     device = "/dev/input/js0";
@@ -79,7 +87,7 @@ void ros2socketcan::JoystickLoopThreadFunc()
     canmsg.err = 0; 
     canmsg.rtr = 0; 
     canmsg.eff = 0;
-    controlcmd.steer = (int)state_can_data.candata[5];
+    controlcmd.steer = (float)state_can_data.candata[5];
     controlcmd.brake = "OFF";  
 
     if (js == -1){
@@ -95,7 +103,16 @@ void ros2socketcan::JoystickLoopThreadFunc()
         {
             case JS_EVENT_BUTTON:
                 state_button.tab[event.number] = event.value;
-                if(state_button.tab[0] == 1 && controlcmd.brake != "ON"){                                                                  /*Acceleration*/
+                /* @@ Acceleration [0;1] ===> button A (green button) + LB/RB
+                @ La vitesse du tricycle a été brider à 20 km/h pour des raisons se sécurité en cas de défaince du système.
+                @ De plus il y'a une valeur de seuil à laquelle répond le tricycle (avec des valeurs trop faibles aucun résultats)
+                @ Chaque valeur de la commande throttle [0;1] aura une valeur correspondante en hexadécimal 
+
+               1706    85     85     85     85       85       85       85       85       85       85      85   2558
+                |------------------------------------------------------------------------------------------------>   
+               6AA                                                                                              9FE 
+                */
+                if(state_button.tab[0] == 1 && controlcmd.brake != "ON"){                                                                  
                     controlcmd.throttle = 0.0;
                     if(state_button.tab[5] == 1 && FLAGS_throttle_inc_delta < 1)
                         FLAGS_throttle_inc_delta += 0.1;
@@ -106,7 +123,11 @@ void ros2socketcan::JoystickLoopThreadFunc()
                     cmd_acc = ((FLAGS_throttle_inc_delta * 10) * 85) + 1706;
                     state_can_data.candata[7] = cmd_acc & 0xFF;
                     state_can_data.candata[6] = (cmd_acc & 0xFF00) >> 8;
-                }else if(state_button.tab[1] == 1){                                                                                         /*Freinage*/
+                }else if(state_button.tab[1] == 1){     
+                /* @@Freinage ON/OFF ===> Button B (red button)
+                @ La fonction de freinage est assurée par la touche B du joystick.
+                @ Il actionne le verin de freinage pour imobiliser le tricycle mais garde en memoire la valeur de l'acc...
+                */
                     var_brake = !var_brake;
                     if(var_brake == true && controlcmd.brake != "ON"){
                         controlcmd.brake = "ON";
@@ -118,6 +139,9 @@ void ros2socketcan::JoystickLoopThreadFunc()
                         state_can_data.candata[0] = 0x02;
                     }
                 }else if(state_button.tab[8] == 1){ 
+                /* @@Freinage d'urgence ===> Guide button
+                @ Arrêt d'urgence en cas d'incident et remise à 0 de la valeur de l'accéleration 
+                */
                     var_brake = true;
                     controlcmd.throttle = 0.0;                                                        
                     controlcmd.brake = "ON";
@@ -135,17 +159,24 @@ void ros2socketcan::JoystickLoopThreadFunc()
                 }
                 break;
             case JS_EVENT_AXIS:
-                axis = get_axis_state(&event, axes);                                                            /*Direction*/
+                axis = get_axis_state(&event, axes); 
+                /* @@Direction [-1;1] ===> Left stick
+                @ La direction est controler par le Stick gauche . 
+                @ angle direction  [0 ... 125 (0x7D) ...250 (0xFA)] --> [ 0° (droite) ... 60° (centre) ... 120° (gauche)]
+                @ X £ [0;250] et Y £ [-1;1] <===> Y = aX + b  ===> Y = (-1/125) * X + 1 
+                */                                                          
                 if (axis < 3 && axis == 0){
                     cmd_sterr = (125*axes[axis].x)/(-32757);
                     if (cmd_sterr < 0 && cmd_sterr >= -250){
                         cmd_sterr += 125;
-                        controlcmd.steer = cmd_sterr;
-                        state_can_data.candata[5] = controlcmd.steer;
+                        cmd_sterr1 = (-0.008 * (float)cmd_sterr) + 1;
+                        controlcmd.steer = cmd_sterr1;
+                        state_can_data.candata[5] = cmd_sterr;
                     } else if (cmd_sterr > 0 && cmd_sterr <= 250){
                         cmd_sterr += 125; 
-                        controlcmd.steer = cmd_sterr;
-                        state_can_data.candata[5] = controlcmd.steer;
+                        cmd_sterr1 = (-0.008 * (float)cmd_sterr) + 1;
+                        controlcmd.steer = cmd_sterr1;
+                        state_can_data.candata[5] = cmd_sterr;
                     }
 
                     state_can_data.candata[0] = 0x01;
@@ -178,8 +209,9 @@ void ros2socketcan::Init(const char* can_socket)
         
     topicname_receive 	<< "CAN/" << canname << "/" << "receive";
     topicname_transmit  << "CAN/" << canname << "/" << "transmit";
-    topicname_transmitbis  << "CAN/" << canname << "/" << "transmit_tricycle_cmd";
-    topicname_receivebis  << "CAN/" << canname << "/" << "receive_tricycle_status";
+    topicname_transmitbis  << "/" << "manuel_tricycle_control";
+    topicname_receivebis   << "/" << "system_check";
+
       
     rclcpp::executors::MultiThreadedExecutor exec;
     
@@ -292,7 +324,7 @@ void ros2socketcan::CanSendConfirm(void)
 
 /*************************************************************************************************************************/
 /*                                                                                                                       */
-/* Traitement des données Can reçu "ID = 0x99" et envoi sur topic :/CAN/can0/receive_tricycle_status & /CAN/can0/receive */
+/* Traitement des données Can reçu "ID = 0x99" et envoi sur topic :/CAN/can0/system_check & /CAN/can0/receive */
 /*                                                                                                                       */
 /*************************************************************************************************************************/
 void ros2socketcan::CanListener(struct can_frame& rec_frame, boost::asio::posix::basic_stream_descriptor<>& stream)

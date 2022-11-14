@@ -162,7 +162,7 @@ class ros2socketcan : public rclcpp::Node
         } state_button;
 
         struct datacan {
-            unsigned int candata[8] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x7D, 0x00, 0x00};
+            unsigned int candata[8] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         } state_can_data;
 
         int js;  
@@ -183,6 +183,7 @@ class ros2socketcan : public rclcpp::Node
         bool var_brake;
         int cmd_acc;
         int cmd_sterr;
+        float cmd_sterr1;
 
         int natsock = socket(PF_CAN, SOCK_RAW, CAN_RAW);
         std::stringstream topicname_receive;
