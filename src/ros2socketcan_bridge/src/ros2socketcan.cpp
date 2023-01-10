@@ -209,7 +209,7 @@ void ros2socketcan::Init(const char* can_socket)
         
     topicname_receive 	<< "CAN/" << canname << "/" << "receive";
     topicname_transmit  << "CAN/" << canname << "/" << "transmit";
-    topicname_transmitbis  << "/" << "manuel_tricycle_control";
+    topicname_transmitbis  << "/" << "manuel_car_control";
     topicname_receivebis   << "/" << "system_check";
 
       
