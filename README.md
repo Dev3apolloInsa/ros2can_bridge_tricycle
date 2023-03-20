@@ -1,4 +1,5 @@
 # Interface ROS 2 - Bus CAN 
+<div align="justify">
 Ce dépôt permet d'envoyer/recevoir des trames CAN à partir de topics ros2 pour le tricycle. Un joystick est utilisé pour l'envoi des commandes, ces données sont en amont interpréter en trames CAN avant d'être envoyer sur le bus CAN. 
 Le code de l'interface ROS a été écrite en fonction de la construction des signaux CAN faite dans une carte STM32 (voir Trames_CAN-1-2.txt).
 
