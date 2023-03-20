@@ -50,7 +50,7 @@ Une fois le bridge lancer vous pouvez utiliser les touche du joystick pour envoy
 
 | Topics |  Type  |  Commentaire  |
 | ------ | ------ | ------ |
-| `/CAN/can0/receive`      |        |        |
-| `/CAN/can0/transmit`       |        |        |
-| `/manuel_car_control`       |        |        |
-| `/system_check`       |        |        |
+| `/CAN/can0/receive`      |  `can_msgs/msg/Frame`      | données reçu au format CAN (CAN to ROS) |
+| `/CAN/can0/transmit`       | `can_msgs/msg/Frame`       | données transmit au format CAN (ROS to CAN) |
+| `/manuel_car_control`       | `can_msgs/msg/TricycleControlCmd`       | Topic ROS pour les signaux de commandes (direction, acceleration, frein) |
+| `/system_check`       | `can_msgs/msg/TricycleStatus`       | topic ROS où on peut visualiser les informations de retour du tricycle |
