@@ -10,21 +10,28 @@ Réference : https://github.com/ROS4SPACE/ros2can_bridge
 - Convertisseur CAN-USB
 
 ## Tester l'inteface avec un bus CAN simulé 
-Install can-utils :             
+1) Install can-utils :            
 > $ sudo apt-get update                  
   $ sudo apt-get -y install can-utils
 
-Créer une interface CAN virtuelle:                  
+2) Créer une interface CAN virtuelle:                  
 > $ modprobe vcan             
   $ sudo ip link add dev vcan0 type vcan               
   $ sudo ip link set up vcan0            
 
 **Note:** modprobe est nécessaire dans le cas où le pilote n'est toujours pas chargé.
 
-Créer un Fork du le réferenciel, puis clonner et exécuter : 
+3) Connecter l'adaptateur du joystick et allumer le joystick.
+
+4) Créer un Fork du le réferenciel, puis clonner et exécuter : 
 > $ git clone URL_réferenciel             
-  $ cd ~/ros2can_bridge              
+  $ cd ros2can_bridge_tricycle             
   $ colcon build             
   $ source install/setup.bash              
   $ ros2can_bridge                   
+
+Une fois le bridge lancer vous pouvez utiliser les touche du joystick pour envoyé des commandes sur le Bus CAN. 
+
+## Tester l'interface sur le Bus CAN réel du tricycle à l'aide d'un convertisseur CAN-USB
+
 
