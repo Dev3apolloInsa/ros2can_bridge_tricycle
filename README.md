@@ -22,9 +22,9 @@ Créer une interface CAN virtuelle:
 **Note:** modprobe est nécessaire dans le cas où le pilote n'est toujours pas chargé.
 
 Créer un Fork du le réferenciel, puis clonner et exécuter : 
-> $ git clone URL_réferenciel
-  $ cd ~/ros2can_bridge
-  $ colcon build
-  $ source install/setup.bash
-  $ ros2can_bridge
+> $ git clone URL_réferenciel             
+  $ cd ~/ros2can_bridge              
+  $ colcon build             
+  $ source install/setup.bash              
+  $ ros2can_bridge                   
 
