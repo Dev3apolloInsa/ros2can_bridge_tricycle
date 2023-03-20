@@ -34,4 +34,15 @@ Une fois le bridge lancer vous pouvez utiliser les touche du joystick pour envoy
 
 ## Tester l'interface sur le Bus CAN réel du tricycle à l'aide d'un convertisseur CAN-USB
 
+1) Charger l'interface CAN pour le convertisseur 
+> $ sudo ip link set can0 type can bitrate 500000                  
+  $ sudo ip link set up can0
+
+2) Connectez-vous au Bus CAN du tricycle et connecter le joystick 
+3) Créer un Fork du le réferenciel, puis clonner et exécuter : 
+> $ git clone URL_réferenciel                      
+  $ cd ros2can_bridge_tricycle                                       
+  $ colcon build                            
+  $ source install/setup.bash                                    
+  $ ros2can_bridge 
 
