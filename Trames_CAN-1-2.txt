@@ -1,0 +1,89 @@
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Caractéristiques du bus CAN :
+vitesse 500 Kbits/s _ Id standard 11 bits _ CAN_MODE_NORMAL _ Longueur data 8 octets max
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/La trame des états/ 
+
+Trame CAN transmise périodiquement par le microcontrôleur central de bord :
+Retour des états
+
+ *  TRAME ID : 0x99
+ * -----------------------------------------------------------------------------------------------------
+ * |      8 bits/1     |      8 bits/2     |      8 bits/3     |      8 bits/4     |      8 bits/5     |   
+ * |    Bits status1   |      mes 48V   H  |     mes 48V   L   |  mes vitesse  H   |   mes vitesse  L  |                   
+ * ----------------------------------------------------------------------------------------------------
+ *
+
+
+Description octet 1 / status1 : état tensions et erreurs freinage
+bit 0 : alim  5V OK si 1 (4.5V - 5.5V)
+bit 1 : alim  12V OK si 1 (10.8V - 13.2V)
+bit 2 : alim  14.8V OK si 1 (13.3V - 16.3V)
+bit 3 : alim  48V OK si 1 (38.4V - 59.4V)   
+bit 4 : FREIN OFF time out  OK si 0 (si 1 anomalie de la course du frein, au relachement du frein)
+bit 5 : FREIN ON time out  OK si 0 (si 1 anomalie de la course du frein, au freinage)
+bit 6 : LOCAL si 1 / REMOTE 0
+bit 7 : FREIN ON si 1 / FREIN OFF si 0 (frein mis / enlevé)
+
+Description octet 2 et 3 : Mesure du 48 V  X 10 :
+MesH_48v/MesL_48v
+Il faut diviser cette valeur par 10, pour obtenir la mesure en volt avec un chiffre aprés la virgule.
+
+Description Octet 4 et 5 : Vitesse roue (tr/s) mesurée X 100:
+MesH_Vit/MesL_Vit
+Pour convertir cette valeur en tr/s il faut la diviser par 100, et ensuite la mutiplier par 5.69 (coefficient issu du diamètre de la roue) pour
+obtenir des km/h.
+Si le tricycle à une vitesse mesurée supérieure à 20 km/h, il s'arrête !!! 
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/La trame des actions/ 
+
+Trame CAN reçue par le microcontrôleur central de bord :
+Réception des actions _ Mode autorisé en REMOTE seulement !
+
+ *  TRAME ID 0x10 :
+ * ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ * |      8 bits/1     |      8 bits/2     |      8 bits/3     |      8 bits/4     |      8 bits/5     |      8 bits/6     |      8 bits/7     |      8 bits/8     |
+ * |Bits commande cmd10|      pwm_frein H  |     pwm_frein L   |  force_frein H    |   force_frein L   |  angle direction  |   DAC_accel  H    |  DAC_accel L      |
+ * -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ *       XXXX XX00     :   FREINAGE :  frein on / pwm_frein & force_frein transmis / acceleration a 0 et mode break activé
+ *       XXXX XX01     :   ACCELERATEUR ET DIRECTION : pas d'opération de  freinage --> acceleration et angle direction
+ *       XXXX XX10     :   LACHER LE FREIN : relache le frein / pwm_frein transmis
+ *       XXXX XX11     :   OPTION :  todo freinage urgence sans paramètre
+
+Description octet 2 et 3 : pwm_frein [0 à 500] pour 0 à 100 % =  vitesse de freinage
+si pwm_frein = 0 ou pwm_frein > 500 --> pwm_frein = 500 (valeur par défaut)
+Par défaut si on laisse ces octets à 0, le freinage se fera à la vitesse maximun.
+pwm_frein H / pwm_frein L
+
+Description octet 4 et 5 : effort traction sur jauge  < force_frein  ---> 3000 max
+si force_frein = 0  ou  force_frein > 3000 --> force_frein = 3000 (valeur par défaut)
+Par défaut si on laisse ces octets à 0, le freinage se fera à la force maximun.
+force_frein H / force_frein L
+
+Description octet 6 : angle direction  [0 ... 125 (0x7D) ...250 (0xFA)] --> [ 0° (droite) ... 60° (centre) ... 120° (gauche)] 
+angle direction
+
+Description octet 7 et 8 : DAC_accel (accélerateur), commande le controleur moteur sur 12 bits avec une sortie analogique  0x0000 à 0x0FFF --> 3.3V
+DAC_accel  H / DAC_accel  L.
+Si le tricycle à une vitesse mesurée supérieure à 20 km/h, il s'arrête !!! 
+Exemples de trames de commande :
+                  |ID|..........octet 1 à octet 8............|  
+Frein on  -->      0x10 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+Frein off -->      0x10 0x02 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+Acceleration-->    0x10 0x01 0x00 0x00 0x00 0x00 0x7D 0x0F 0xFF  // 
+Angle   -->        0x10 0x01 0x00 0x00 0x00 0x00 0x7D 0x00 0x00 // milieu  
+Angle   -->        0x10 0x01 0x00 0x00 0x00 0x00 0xFA 0x00 0x00 // gauche du conducteur 250 décimal  
+Angle   -->        0x10 0x01 0x00 0x00 0x00 0x00 0x00 0x00 0x00 // droite du conducteur
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
